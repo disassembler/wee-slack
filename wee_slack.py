@@ -1575,11 +1575,14 @@ class SlackDMChannel(SlackChannel):
 
     def __init__(self, eventrouter, users, **kwargs):
         dmuser = kwargs["user"]
-        kwargs["name"] = users[dmuser].name
-        super(SlackDMChannel, self).__init__(eventrouter, **kwargs)
-        self.type = 'im'
-        self.update_color()
-        self.set_name(self.slack_name)
+        if dmuser in users:
+            kwargs["name"] = users[dmuser].name
+            super(SlackDMChannel, self).__init__(eventrouter, **kwargs)
+            self.type = 'im'
+            self.update_color()
+            self.set_name(self.slack_name)
+        else:
+            self.type = 'broken'
 
     def set_name(self, slack_name):
         self.name = slack_name
@@ -2083,7 +2086,9 @@ def handle_rtmstart(login_data, eventrouter):
             channels[item["id"]] = SlackChannel(eventrouter, **item)
 
         for item in login_data["ims"]:
-            channels[item["id"]] = SlackDMChannel(eventrouter, users, **item)
+            channel = SlackDMChannel(eventrouter, users, **item)
+            if channel.type != "broken":
+                channels[item["id"]] = channel
 
         for item in login_data["groups"]:
             if item["name"].startswith('mpdm-'):
